@@ -61,6 +61,8 @@ public:
 
     int arity() { return m_block ? m_block->arity() : 0; }
 
+    Block *wrap_in_block(ModuleObject *);
+
     virtual void visit_children(Visitor &visitor) override {
         Object::visit_children(visitor);
         visitor.visit(m_block);

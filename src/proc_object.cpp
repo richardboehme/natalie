@@ -21,4 +21,17 @@ Value ProcObject::call(Env *env, Args args, Block *block) {
     return NAT_RUN_BLOCK_WITHOUT_BREAK(env, m_block, args, block);
 }
 
+Value block_wrapper_fn(Env *env, Value, Args, Block *) {
+    auto proc = env->outer()->var_get("proc", 0);
+    assert(proc);
+    assert(proc->is_proc());
+    return proc->as_proc()->call(env);
+}
+
+Block *ProcObject::wrap_in_block(ModuleObject *owner) {
+    auto block_env = new Env {};
+    block_env->var_set("proc", 0, true, this);
+    return new Block { block_env, owner, block_wrapper_fn, 0 };
+}
+
 }

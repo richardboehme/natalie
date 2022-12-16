@@ -626,7 +626,9 @@ Value ModuleObject::define_method(Env *env, Value name_value, Value method_value
     auto name = name_value->to_symbol(env, Object::Conversion::Strict);
     if (method_value) {
         if (method_value->is_proc()) {
-            define_method(env, name, method_value->as_proc()->block());
+            // We need to wrap this block to allow executing is as the block owner
+            // instead of `this`
+            define_method(env, name, method_value->as_proc()->wrap_in_block(this));
         } else {
             Method *method;
             if (method_value->is_method()) {
@@ -647,7 +649,8 @@ Value ModuleObject::define_method(Env *env, Value name_value, Value method_value
             define_method(env, name, method->fn(), method->arity());
         }
     } else if (block) {
-        define_method(env, name, block);
+        auto proc = new ProcObject { block };
+        define_method(env, name, proc->wrap_in_block(this));
     } else {
         env->raise("ArgumentError", "tried to create Proc object without a block");
     }
