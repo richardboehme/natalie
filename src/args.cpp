@@ -53,7 +53,9 @@ ArrayObject *Args::to_array() const {
 }
 
 ArrayObject *Args::to_array_for_block(Env *env, ssize_t min_count, ssize_t max_count, bool spread) const {
-    if (m_size == 1 && spread) {
+    // If we have no "this block" we are not in a block and should not spread args.
+    // This can happen if a block is used in combination with Module#define_method.
+    if (m_size == 1 && spread && env->this_block()) {
         auto ary = to_ary(env, m_data[0], true)->dup(env)->as_array();
         ssize_t count = ary->size();
         if (max_count != -1 && count > max_count)
@@ -83,6 +85,15 @@ void Args::ensure_argc_between(Env *env, size_t expected_low, size_t expected_hi
 void Args::ensure_argc_at_least(Env *env, size_t expected, std::initializer_list<const String> keywords) const {
     if (m_size < expected)
         env->raise("ArgumentError", "wrong number of arguments (given {}, expected {}+{})", m_size, expected, argc_error_suffix(keywords));
+}
+
+void Args::ensure_argc_by_arity(Env *env, int arity, std::initializer_list<const String> keywords) const {
+    if (arity == -1) return;
+
+    if (arity >= 0)
+        ensure_argc_is(env, arity, keywords);
+    else
+        ensure_argc_at_least(env, -arity - 1, keywords);
 }
 
 String Args::argc_error_suffix(std::initializer_list<const String> keywords) const {

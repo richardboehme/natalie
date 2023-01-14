@@ -18,7 +18,13 @@ Value Method::call(Env *env, Value self, Args args, Block *block) {
     e.set_line(env->line());
     e.set_block(block);
 
+    if (m_self)
+        self = m_self;
+
     auto call_fn = [&](Args args) {
+        if (m_enforce_arity)
+            args.ensure_argc_by_arity(env, m_arity);
+
         if (block && !block->calling_env()) {
             Defer clear_calling_env([&]() {
                 block->clear_calling_env();

@@ -708,9 +708,9 @@ void Object::alias(Env *env, SymbolObject *new_name, SymbolObject *old_name) {
     }
 }
 
-SymbolObject *Object::define_singleton_method(Env *env, SymbolObject *name, MethodFnPtr fn, int arity, bool optimized) {
+SymbolObject *Object::define_singleton_method(Env *env, SymbolObject *name, MethodFnPtr fn, int arity, Env *method_env, bool optimized) {
     ClassObject *klass = singleton_class(env);
-    klass->define_method(env, name, fn, arity, optimized);
+    klass->define_method(env, name, fn, arity, method_env, optimized);
     return name;
 }
 
@@ -726,8 +726,8 @@ SymbolObject *Object::undefine_singleton_method(Env *env, SymbolObject *name) {
     return name;
 }
 
-SymbolObject *Object::define_method(Env *env, SymbolObject *name, MethodFnPtr fn, int arity, bool optimized) {
-    m_klass->define_method(env, name, fn, arity, optimized);
+SymbolObject *Object::define_method(Env *env, SymbolObject *name, MethodFnPtr fn, int arity, Env *method_env, bool optimized) {
+    m_klass->define_method(env, name, fn, arity, method_env, optimized);
     return name;
 }
 

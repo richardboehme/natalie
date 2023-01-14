@@ -65,6 +65,7 @@ public:
     void ensure_argc_is(Env *env, size_t expected, std::initializer_list<const String> keywords = {}) const;
     void ensure_argc_between(Env *env, size_t expected_low, size_t expected_high, std::initializer_list<const String> keywords = {}) const;
     void ensure_argc_at_least(Env *env, size_t expected, std::initializer_list<const String> keywords = {}) const;
+    void ensure_argc_by_arity(Env *env, int arity, std::initializer_list<const String> keywords = {}) const;
 
     size_t size() const { return m_size; }
     const Value *data() const { return m_data; }

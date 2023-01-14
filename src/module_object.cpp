@@ -272,19 +272,38 @@ Value ModuleObject::cvar_set(Env *env, SymbolObject *name, Value val) {
     return val;
 }
 
-SymbolObject *ModuleObject::define_method(Env *env, SymbolObject *name, MethodFnPtr fn, int arity, bool optimized) {
-    Method *method = new Method { name->c_str(), this, fn, arity };
+SymbolObject *ModuleObject::define_method(Env *env, SymbolObject *name, MethodFnPtr fn, int arity, Env *method_env, bool optimized) {
+    Method *method = new Method { name->c_str(), this, fn, arity, method_env };
     if (optimized)
         method->set_optimized(true);
-    define_method(env, name, method, m_method_visibility);
+
+    auto visibility = m_method_visibility;
+
+    if (name->equal("initialize"_s)) {
+        visibility = MethodVisibility::Private;
+    }
+
+    define_method(env, name, method, visibility);
     if (m_module_function)
         define_singleton_method(env, name, fn, arity);
     return name;
 }
 
 SymbolObject *ModuleObject::define_method(Env *env, SymbolObject *name, Block *block) {
-    Method *method = new Method { name->c_str(), this, block };
-    define_method(env, name, method, m_method_visibility);
+    Value self = nullptr;
+    if (block->self() && !equal(block->self()))
+        self = block->self();
+
+    Method *method = new Method { name->c_str(), this, block, self };
+    method->enforce_arity();
+
+    auto visibility = m_method_visibility;
+
+    if (name->equal("initialize"_s)) {
+        visibility = MethodVisibility::Private;
+    }
+
+    define_method(env, name, method, visibility);
     if (m_module_function)
         define_singleton_method(env, name, block);
     return name;
@@ -318,6 +337,9 @@ void ModuleObject::methods(Env *env, ArrayObject *array, bool include_super) {
 }
 
 void ModuleObject::define_method(Env *env, SymbolObject *name, Method *method, MethodVisibility visibility) {
+    if (respond_to(env, "method_added"_s))
+        send(env, "method_added"_s, { name });
+
     m_methods.put(name, MethodInfo(visibility, method), env);
 }
 
@@ -623,6 +645,8 @@ bool ModuleObject::does_include_module(Env *env, Value module) {
 }
 
 Value ModuleObject::define_method(Env *env, Value name_value, Value method_value, Block *block) {
+    assert_not_frozen(env);
+
     auto name = name_value->to_symbol(env, Object::Conversion::Strict);
     if (method_value) {
         if (method_value->is_proc()) {
@@ -637,14 +661,14 @@ Value ModuleObject::define_method(Env *env, Value name_value, Value method_value
                 env->raise("TypeError", "wrong argument type {} (expected Proc/Method/UnboundMethod)", method_value->klass()->inspect_str());
             }
             ModuleObject *owner = method->owner();
-            if (owner != this && owner->is_class() && !owner->is_subclass_of(this)) {
+            if (owner != this && owner->is_class() && !this->is_subclass_of(owner)) {
                 if (owner->as_class()->is_singleton()) {
                     env->raise("TypeError", "can't bind singleton method to a different class");
                 } else {
                     env->raise("TypeError", "bind argument must be a subclass of {}", owner->inspect_str());
                 }
             }
-            define_method(env, name, method->fn(), method->arity());
+            define_method(env, name, method->fn(), method->arity(), method->env());
         }
     } else if (block) {
         define_method(env, name, block);

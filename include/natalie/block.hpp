@@ -37,6 +37,7 @@ public:
     void clear_calling_env() { m_calling_env = nullptr; }
 
     void set_self(Value self) { m_self = self; }
+    Value self() { return m_self; }
 
     void copy_fn_pointer_to_method(Method *);
 

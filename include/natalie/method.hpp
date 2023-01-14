@@ -11,18 +11,20 @@ namespace Natalie {
 
 class Method : public Cell {
 public:
-    Method(const char *name, ModuleObject *owner, MethodFnPtr fn, int arity)
+    Method(const char *name, ModuleObject *owner, MethodFnPtr fn, int arity, Env *env)
         : m_name { name }
         , m_owner { owner }
         , m_fn { fn }
-        , m_arity { arity } {
+        , m_arity { arity }
+        , m_env { env } {
         assert(fn);
     }
 
-    Method(const char *name, ModuleObject *owner, Block *block)
+    Method(const char *name, ModuleObject *owner, Block *block, Value self = nullptr)
         : m_name { name }
         , m_owner { owner }
         , m_arity { block->arity() }
+        , m_self { self }
         , m_env { new Env(*block->env()) } {
         block->copy_fn_pointer_to_method(this);
         assert(m_env);
@@ -43,9 +45,11 @@ public:
     ModuleObject *owner() const { return m_owner; }
 
     int arity() const { return m_arity; }
+    void enforce_arity() { m_enforce_arity = true; }
 
     virtual void visit_children(Visitor &visitor) override final {
         visitor.visit(m_owner);
+        visitor.visit(m_self);
         visitor.visit(m_env);
     }
 
@@ -58,7 +62,9 @@ private:
     ModuleObject *m_owner;
     MethodFnPtr m_fn;
     int m_arity { 0 };
+    Value m_self { nullptr };
     Env *m_env { nullptr };
     bool m_optimized { false };
+    bool m_enforce_arity { false };
 };
 }
